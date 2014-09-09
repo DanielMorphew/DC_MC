@@ -44,6 +44,27 @@
       READ (1, *) 
       READ (1, *) IDUMP1, IDUMP2, IDUMP3
  
+!----------MERGE NEEDED INPUTS------------------
+
+      READ (1, *)
+      READ (1, *) NPART
+      READ (1, *) 
+      READ (1, *) DPMUSQ, RCUT
+      READ (1, *)
+      READ (1, *) ALPHA, NC, NCSQMAX
+      READ (1, *)
+      READ (1, *) TMP
+      READ (1, *)
+      READ (1, *) DNS
+      READ (1, *)
+      READ (1, *) MAXDTR, MAXDRT
+      READ (1, *)
+      READ (1, *) NSTEP, NEQ
+      READ (1, *) 
+      READ (1, *) IDUMP1, IDUMP2, IDUMP3
+      
+!---------END ALTERNATE INPUTS------------------      
+ 
       CLOSE (UNIT = 1)
 
       QCOUNT = 0
@@ -55,6 +76,23 @@
       IF (FIELD == 0.D0) FIELDT = .FALSE.
 
       ALLOCATE(RBSITE(NRBSITE,3), RBUV(NRBSITE,3), R(NPART,3), Q(NPART,4), RS(NTSITE,3), E(NTSITE,3))
+
+!---------START NEW BLOCK-------------------
+
+!     CALCULATE FROM INPUT PARAMETERS
+
+!      ALLOCATE(R(NPART,3), E(NPART,3), MCO(MAXK,NPART), MSO(MAXK,NPART))
+
+!      VLM    = DFLOAT(NPART)/DNS
+!      BOXL   = VLM ** (1.D0/3.D0)
+!      MAXDRT = MAXDRT*PI/180.D0
+!      INVRPI = 1.D0/SQRT(PI)
+!      ALPHA  = ALPHA/BOXL
+!      ALPSQ  = ALPHA*ALPHA
+!      RCUTSQ = RCUT*RCUT 
+!      GU     = 2.D0*PI*DPMUSQ/BOXL**3       ! Cubic box 
+
+!--------END NEW BLOCK-----------------------
 
       CALL DEFSHIFTDP()
      
@@ -225,6 +263,7 @@
 
 !     Propose perturbation in the translational coordinates of the selected particle
          R(INDXP,:) = R(INDXP,:) + (2.D0*RANF(DUMMY) - 1.D0)*MAXDTR
+         R(INDXP,:) = R(INDXP,:) - BOXL*ANINT(R(INDXP,:)/BOXL) !-----Preserves minimum image NEW!!-------
 
 !     Now propose perturbation in the rotational coordinates of the same particle
 
@@ -242,9 +281,21 @@
 
 !     Calculate energy contribution of the selected particle with the proposed position and orientation
 
-         CALL SNENRG(INDXP,ENRGN)
+        CALL SNENRG(INDXP,ENRGN)
+        
+!-------------NEW BLOCK----------------
+         MC(1:MAXK) = MCO(1:MAXK,INDXP)
+         MS(1:MAXK) = MSO(1:MAXK,INDXP)
 
-         DELE = ENRGN - ENRGO 
+         CALL SNENRG_DIPOLE_FOURIERSPACE(INDXP,DPEKS,MC,MS,SUMC,SUMS)
+
+         DELE = ENRGN - ENRGO + DPEKS 
+!-------------END NEW BLOCK-------------
+
+
+
+
+ !        DELE = ENRGN - ENRGO 
 
          REJECTT = .FALSE.
 
@@ -318,30 +369,48 @@
          DO J1 = 1, NPART 
             IF (J1 == J2) CYCLE
             RIJ(:) = R(J1,:) - R(J2,:)
+            RIJ(:) = RIJ(:) - BOXL*ANINT(RIJ(:)/BOXL) !-------Preserves minimum image NEW!!------------
             RIJSQ  = DOT_PRODUCT(RIJ(:),RIJ(:))
 !     Isotropic interaction between the spherical cores described by the Yukawa potential
             ABSRIJ = DSQRT(RIJSQ)
             R2     = 1.D0/RIJSQ
             EXPFCT = EXP(-YKAPPA*(ABSRIJ - 1.D0))
             PES = PES + EXPFCT/ABSRIJ
+
+!----------BEGIN MERGE OF EWALD SUM (DIFFICULT)-------------------
+
 !     Dipolar contribution
-            DO I = 1, NRBSITE
-               J7    = NRBSITE*(J1-1) + I
-               EI(:) = E(J7,:)
-               RSS(:) = RS(J7,:) - RS(J8,:)
-               R2     = DOT_PRODUCT(RSS(:),RSS(:))
-               ABSRIJ = DSQRT(R2)
-               NR(:)  = RSS(:)/ABSRIJ
-               R2     = 1.D0/R2
-               R4     = R2*R2
-               ALP    = DOT_PRODUCT(NR(:),EI(:))
-               BET    = DOT_PRODUCT(NR(:),EJ(:))
-               GAM    = DOT_PRODUCT(EI(:),EJ(:))
-               DPFCT  = 3.D0*DPMU*DPMU
-               PES = PES + DPFCT*R2*(GAM/3.D0 - ALP*BET)/ABSRIJ
-            ENDDO
+!            DO I = 1, NRBSITE
+!               J7    = NRBSITE*(J1-1) + I
+!               EI(:) = E(J7,:)
+!               RSS(:) = RS(J7,:) - RS(J8,:)
+!               RSS(:) = RSS(:) - BOXL*ANINT(RSS(:)/BOXL) !------PRESERVES MINIMUM IMAGE NEW!!---------
+!               R2     = DOT_PRODUCT(RSS(:),RSS(:))
+!               ABSRIJ = DSQRT(R2)
+!               NR(:)  = RSS(:)/ABSRIJ
+!               R2     = 1.D0/R2
+!               R4     = R2*R2
+!               ALP    = DOT_PRODUCT(NR(:),EI(:))
+!               BET    = DOT_PRODUCT(NR(:),EJ(:))
+!               GAM    = DOT_PRODUCT(EI(:),EJ(:))
+!               DPFCT  = 3.D0*DPMU*DPMU
+!               PES = PES + DPFCT*R2*(GAM/3.D0 - ALP*BET)/ABSRIJ
+!            ENDDO
+!         ENDDO
+!      ENDDO
+      
+      CALL SNENRG_DIPOLE_REALSPACE(J1,J8,PERS)
+
+!      CALL SNENRG_DIPOLE_FOURIERSPACE(J1,J8,PEKS)
+
+      PES = PES + PERS !+ PEKS
+
+!      PRINT *, 'PES = ', PES/DFLOAT(NPART)
+         
          ENDDO
       ENDDO
+!----------EWALD SUM ROUTINES LOCATED AT THE END OF THE FILE-------
+!----------END OF MERGER SECTION 1---------------------------------
 
       END SUBROUTINE SNENRG
 
@@ -377,6 +446,7 @@
          DO J2 = J1 + 1, NPART
             J4 = 3*J2
             RIJ(:) = R(J1,:) - R(J2,:)
+            RIJ(:) = RIJ(:) - BOXL*ANINT(RIJ(:)/BOXL) !---------PRESERVE MINIMUM IMAGE NEW!!!-----------
             RIJSQ  = DOT_PRODUCT(RIJ(:),RIJ(:))
 
 !     Isotropic interaction between the spherical cores described by the Yukawa potential
@@ -384,29 +454,39 @@
             R2     = 1.D0/RIJSQ
             EXPFCT = EXP(-YKAPPA*(ABSRIJ - 1.D0))
             PE     = PE + EXPFCT/ABSRIJ
+
+!------------MERGER OF EWALD SUMMATION SECTION 2 (DIFFICULT)-----------
+
 !     Dipolar contribution
-            DO I = 1, NRBSITE
-               J7    = NRBSITE*(J1-1) + I
-               EI(:) = E(J7,:)
-               DO J = 1, NRBSITE
-                  J8     = NRBSITE*(J2-1) + J
-                  EJ(:)  = E(J8,:)
-                  RSS(:) = RS(J7,:) - RS(J8,:)
-                  R2     = DOT_PRODUCT(RSS(:),RSS(:))
-                  ABSRIJ = DSQRT(R2)
-                  NR(:)  = RSS(:)/ABSRIJ
-                  R2     = 1.D0/R2
-                  R4     = R2*R2
-                  ALP    = DOT_PRODUCT(NR(:),EI(:))
-                  BET    = DOT_PRODUCT(NR(:),EJ(:))
-                  GAM    = DOT_PRODUCT(EI(:),EJ(:))
-                  DPFCT  = 3.D0*DPMU*DPMU
-                  PE     = PE + DPFCT*R2*(GAM/3.D0 - ALP*BET)/ABSRIJ
-               ENDDO
+!            DO I = 1, NRBSITE
+!               J7    = NRBSITE*(J1-1) + I
+!               EI(:) = E(J7,:)
+!               DO J = 1, NRBSITE
+!                  J8     = NRBSITE*(J2-1) + J
+!                  EJ(:)  = E(J8,:)
+!                  RSS(:) = RS(J7,:) - RS(J8,:)
+!                  R2     = DOT_PRODUCT(RSS(:),RSS(:))
+!                 ABSRIJ = DSQRT(R2)
+!                  NR(:)  = RSS(:)/ABSRIJ
+!                  R2     = 1.D0/R2
+!                  R4     = R2*R2
+!                  ALP    = DOT_PRODUCT(NR(:),EI(:))
+!                  BET    = DOT_PRODUCT(NR(:),EJ(:))
+!                  GAM    = DOT_PRODUCT(EI(:),EJ(:))
+!                  DPFCT  = 3.D0*DPMU*DPMU
+!                  PE     = PE + DPFCT*R2*(GAM/3.D0 - ALP*BET)/ABSRIJ
+!               ENDDO
+       CALL ENERGY_DIPOLE_REALSPACE(PER)
+
+      CALL ENERGY_DIPOLE_FOURIERSPACE(PEK)
+      PE = PE + PER + PEK
+ 
+!-------------EWALD ROUTINES LOCATED AT END OF FILE-----------------
+!-------------END OF MERGER SECTION 2-------------------------------
             ENDDO
          ENDDO
       ENDDO
-
+!
 !      stop
 
       END SUBROUTINE ENRG
@@ -1527,3 +1607,115 @@
       ENDDO
 
       END SUBROUTINE DFS
+      
+      !     ============================================================================================== 
+
+      SUBROUTINE SNENRG_DIPOLE_REALSPACE(J1,J8,PERS)
+
+      USE COMMONS, ONLY: ALPHA, ALPSQ, BOXL, DPMUSQ, INVRPI, NPART, E, R, NRBSITE
+
+      IMPLICIT NONE
+
+      INTEGER          :: I, J1, J8
+      DOUBLE PRECISION :: RSS(3), EI(3), EJ(3)
+      DOUBLE PRECISION :: ABSR, RSQ, R2, RCUTSQ, DOTALP, DOTBET, DOTGAM
+      DOUBLE PRECISION :: T0, T1, T2, PERS
+
+      PERS = 0.D0
+      RCUTSQ  = (0.5*BOXL)**2
+
+      !DO I = 1, NPART
+      !   EI(:) = E(I,:)
+      !   IF (I == J) CYCLE
+      !   EJ(:)  = E(J,:)
+      
+      DO I = 1, NRBSITE
+         J7    = NRBSITE*(J1-1) + I
+         EI(:) = E(J7,:)
+         RSS(:) = RS(J7,:) - RS(J8,:) 
+         RSS(:) = RSS(:) - BOXL*ANINT(RSS(:)/BOXL)
+         RSQ    = DOT_PRODUCT(RSS(:),RSS(:))
+         IF (RSQ < RCUTSQ) THEN
+            ABSR    = SQRT(RSQ)
+            R2      = 1.D0/RSQ
+            T0      = 2.D0*DPMUSQ*ALPHA*INVRPI*R2*EXP(-ALPSQ*RSQ)
+            T1      = DPMUSQ*R2*ERFC(ALPHA*ABSR)/ABSR + T0
+            T2      = 3.D0*R2*T1 + 2*ALPSQ*T0
+            DOTALP  = DOT_PRODUCT(RSS(:),EI(:))
+            DOTBET  = DOT_PRODUCT(RSS(:),EJ(:))
+            DOTGAM  = DOT_PRODUCT(EI(:),EJ(:))
+            PERS    = PERS + T1*DOTGAM - T2*DOTALP*DOTBET
+         ENDIF
+      ENDDO
+!      PERS = PERS - 2.D0*DPMUSQ*ALPHA**3*NPART*INVRPI/3.D0
+
+      END SUBROUTINE SNENRG_DIPOLE_REALSPACE
+
+!     ============================================================================================== 
+      SUBROUTINE SNENRG_DIPOLE_FOURIERSPACE(J,DPEKS,MC,MS,SUMC,SUMS)
+
+      USE COMMONS, ONLY: ALPHA, BOXL, GU, NC, NCSQMAX, NPART, MAXK, PI, R, E, SUMCO, SUMSO, MCO, MSO, KFCTR, NRBSITE
+
+      IMPLICIT NONE
+
+      INTEGER          :: NVV, VN(3), NX, NY, NZ, J, K, TOTK
+      DOUBLE PRECISION :: DUMMY, FCTR, PC, PS, MC(MAXK), MS(MAXK), SUMC(MAXK), SUMS(MAXK), WS, DPEKS
+      DOUBLE PRECISION :: VC(3), VS(3), TCOS(0:NC,3), TSIN(0:NC,3)
+      DOUBLE PRECISION :: T(3), TT(3), U(3), W(3)
+      DOUBLE PRECISION, PARAMETER :: TWOPI = 8.D0*DATAN(1.D0)
+
+      DPEKS = 0.D0
+!     Tabulates cos and sin functions
+      T(:) = TWOPI/BOXL
+      TT(:) = T(:)*RS(J,:)
+      TCOS(0,:) = 1.D0
+      TSIN(0,:) = 0.D0
+      TCOS(1,:) = COS(TT(:))
+      TSIN(1,:) = SIN(TT(:))
+      U(:) = 2.D0*TCOS(1,:)
+      TCOS(2,:) = U(:)*TCOS(1,:)
+      TSIN(2,:) = U(:)*TSIN(1,:)
+      TT(:) = 1.D0
+      TCOS(2,:) = TCOS(2,:) - TT(:)
+      DO K = 3, NC
+         W(:) = U(:)*TCOS(K-1,:)
+         TCOS(K,:) = W(:) - TCOS(K-2,:)
+         W(:) = U(:)*TSIN(K-1,:)
+         TSIN(K,:) = W(:) - TSIN(K-2,:)
+      ENDDO
+     
+      TOTK = 0
+      DO NZ = 0, NC
+         DO NY =-NC, NC
+            DO NX =-NC, NC
+               VN(:) = (/NX, NY, NZ/)
+               NVV   = DOT_PRODUCT(VN,VN)
+               IF (NVV == 0 .OR. NVV > NCSQMAX) CYCLE
+               TOTK = TOTK + 1
+
+               VC(:) = (/TCOS(ABS(NX),1), TCOS(ABS(NY),2), TCOS(NZ,3)/)
+               VS(:) = (/TSIN(ABS(NX),1), TSIN(ABS(NY),2), TSIN(NZ,3)/)
+
+               IF (NX < 0) VS(1) =-VS(1)
+               IF (NY < 0) VS(2) =-VS(2)
+
+               PC = VC(1)*VC(2)*VC(3) - VC(1)*VS(2)*VS(3) - VS(1)*VC(2)*VS(3) - VS(1)*VS(2)*VC(3)
+               PS = VS(1)*VC(2)*VC(3) + VC(1)*VS(2)*VC(3) + VC(1)*VC(2)*VS(3) - VS(1)*VS(2)*VS(3)
+
+               DUMMY = NX*E(J,1) + NY*E(J,2) + NZ*E(J,3)
+
+               MC(TOTK) = PC*DUMMY
+               MS(TOTK) = PS*DUMMY
+
+               SUMC(TOTK) = SUMCO(TOTK) - MCO(TOTK,J) + MC(TOTK) 
+               SUMS(TOTK) = SUMSO(TOTK) - MSO(TOTK,J) + MS(TOTK)
+ 
+               DPEKS = DPEKS + GU*KFCTR(TOTK)*(SUMC(TOTK)*SUMC(TOTK) + SUMS(TOTK)*SUMS(TOTK) &
+                     - SUMCO(TOTK)*SUMCO(TOTK) - SUMSO(TOTK)*SUMSO(TOTK))
+            ENDDO
+         ENDDO
+      ENDDO
+
+      END SUBROUTINE SNENRG_DIPOLE_FOURIERSPACE
+
+!     ============================================================================================== 
