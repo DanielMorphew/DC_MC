@@ -1,17 +1,18 @@
       MODULE COMMONS
-
+      
       IMPLICIT NONE
-
-      INTEGER :: NPART, NRBSITE, NTSITE, MYUNIT, ISTEP, QCOUNT 
+      
+      INTEGER, PARAMETER :: MAXK = 4000
+      DOUBLE PRECISION, PARAMETER :: PI = 4.D0*DATAN(1.D0)
+      DOUBLE PRECISION :: ALPHA, ALPSQ, BOXL, DPMUSQ, INVRPI, RCUTSQ, GU
+      DOUBLE PRECISION :: SUMCO(MAXK), SUMSO(MAXK), KFCTR(MAXK) 
+      INTEGER :: NPART, NRBSITE, NTSITE, MYUNIT, ISTEP, QCOUNT, NC, NCSQMAX
       DOUBLE PRECISION :: YKAPPA, DPMU, RSHIFT, FIELD
       DOUBLE PRECISION :: MAXDTR, MAXDRT, TMP, RADIUS
-      DOUBLE PRECISION, ALLOCATABLE :: RBSITE(:,:), RBUV(:,:), R(:,:), Q(:,:), RS(:,:), E(:,:)
-      LOGICAL          :: FIELDT
-
-      END MODULE COMMONS
-
-!     ==============================================================================================
-
+      DOUBLE PRECISION, ALLOCATABLE :: RBSITE(:,:), RBUV(:,:), R(:,:), Q(:,:), RS(:,:), E(:,:), MCO(:,:), MSO(:)
+      LOGICAL :: FIELDT
+      
+      =========================
       PROGRAM SHIFTDP_MC_NVT
 
       USE COMMONS
@@ -43,26 +44,30 @@
       READ (1, *) NSTEP, NEQ
       READ (1, *) 
       READ (1, *) IDUMP1, IDUMP2, IDUMP3
- 
-!----------MERGE NEEDED INPUTS------------------
-
       READ (1, *)
-      READ (1, *) NPART
+      READ (1, *) RCUT, DNS
       READ (1, *) 
-      READ (1, *) DPMUSQ, RCUT
-      READ (1, *)
       READ (1, *) ALPHA, NC, NCSQMAX
-      READ (1, *)
-      READ (1, *) TMP
-      READ (1, *)
-      READ (1, *) DNS
-      READ (1, *)
-      READ (1, *) MAXDTR, MAXDRT
-      READ (1, *)
-      READ (1, *) NSTEP, NEQ
-      READ (1, *) 
-      READ (1, *) IDUMP1, IDUMP2, IDUMP3
       
+!----------MERGE NEEDED INPUTS------------------
+!
+!      READ (1, *)
+!      READ (1, *) NPART
+!      READ (1, *) 
+!      READ (1, *) DPMUSQ, RCUT
+!      READ (1, *)
+!      READ (1, *) ALPHA, NC, NCSQMAX
+!      READ (1, *)
+!      READ (1, *) TMP
+!      READ (1, *)
+!      READ (1, *) DNS
+!      READ (1, *)
+!      READ (1, *) MAXDTR, MAXDRT
+!      READ (1, *)
+!      READ (1, *) NSTEP, NEQ
+!      READ (1, *) 
+!      READ (1, *) IDUMP1, IDUMP2, IDUMP3
+!      
 !---------END ALTERNATE INPUTS------------------      
  
       CLOSE (UNIT = 1)
@@ -81,16 +86,16 @@
 
 !     CALCULATE FROM INPUT PARAMETERS
 
-!      ALLOCATE(R(NPART,3), E(NPART,3), MCO(MAXK,NPART), MSO(MAXK,NPART))
-
-!      VLM    = DFLOAT(NPART)/DNS
-!      BOXL   = VLM ** (1.D0/3.D0)
-!      MAXDRT = MAXDRT*PI/180.D0
-!      INVRPI = 1.D0/SQRT(PI)
-!      ALPHA  = ALPHA/BOXL
-!      ALPSQ  = ALPHA*ALPHA
-!      RCUTSQ = RCUT*RCUT 
-!      GU     = 2.D0*PI*DPMUSQ/BOXL**3       ! Cubic box 
+      ALLOCATE( MCO(MAXK,NPART), MSO(MAXK,NPART))
+      DPMUSQ = DPMU**2
+      VLM    = DFLOAT(NPART)/DNS
+      BOXL   = VLM ** (1.D0/3.D0)
+      MAXDRT = MAXDRT*PI/180.D0
+      INVRPI = 1.D0/SQRT(PI)
+      ALPHA  = ALPHA/BOXL
+      ALPSQ  = ALPHA*ALPHA
+      RCUTSQ = RCUT*RCUT 
+      GU     = 2.D0*PI*DPMUSQ/BOXL**3       ! Cubic box 
 
 !--------END NEW BLOCK-----------------------
 
@@ -141,8 +146,8 @@
 !         PRS     = (NP * TMP + W / 3.D0) / VLM
 !         SUMPRS  = SUMPRS + PRS
 !         SUMVLM  = SUMVLM + VLM
-!         DNS     = DFLOAT(NPART)/ VLM
-!         SUMDNS  = SUMDNS + DNS
+         DNS     = DFLOAT(NPART)/ VLM
+         SUMDNS  = SUMDNS + DNS
          ICNT    = ICNT + 1
          ISTEP   = ISTEP + 1
  
@@ -152,16 +157,16 @@
 !            print *, PEPP, SUMPE, ICNT, AVPE
 !            AVPRS  = SUMPRS / DFLOAT(ICNT)
 !            AVVLM  = SUMVLM / DFLOAT(ICNT)
-!            AVDNS  = SUMDNS / DFLOAT(ICNT)
+            AVDNS  = SUMDNS / DFLOAT(ICNT)
 
             OPEN (UNIT=3, FILE='energy.dat', STATUS='UNKNOWN',ACCESS ='APPEND')  
 !            WRITE (3, *) PEPP, AVPE, PRS, AVPRS
             WRITE (3, *) PEPP, AVPE
             CLOSE (UNIT = 3, STATUS = 'KEEP')
 
-!            OPEN (UNIT=9, FILE='dns.dat', STATUS='UNKNOWN', ACCESS ='APPEND')
-!            WRITE (9, *) BOXL(1), BOXL(2), BOXL(3), AVVLM, AVDNS
-!            CLOSE (UNIT = 9, STATUS = 'KEEP')
+            OPEN (UNIT=9, FILE='dns.dat', STATUS='UNKNOWN', ACCESS ='APPEND')
+            WRITE (9, *) BOXL(1), BOXL(2), BOXL(3), AVVLM, AVDNS
+            CLOSE (UNIT = 9, STATUS = 'KEEP')
 
          ENDIF
 
@@ -238,7 +243,7 @@
 
       INTEGER          :: J, J1, J2, INDXP, ACCPTC
       DOUBLE PRECISION :: RO(3), QO(4), QN(4), RSO(NRBSITE,3), RM(3,3), EO(NRBSITE,3)
-      DOUBLE PRECISION :: PE, DELE, ENRGO, ENRGN 
+      DOUBLE PRECISION :: PE, DELE, ENRGO, ENRGN, DPEKS, MC(MAXK), MS(MAXK), SUMC(MAXK), SUMS(MAXK) !ADDED 4 VARIABLES
       DOUBLE PRECISION :: RANF, DUMMY, BLTZMN, rand   
       LOGICAL          :: INSIDET, PERCT, REJECTT
 
@@ -304,33 +309,36 @@
             IF ((RANF(DUMMY) > BLTZMN)) THEN
                REJECTT = .TRUE.         ! REJECTION
             ELSE
+               ACCPTC = ACCPTC + 1    !ADDED NEW LINE AND REMOVED CONTAINER AS NOT NEEDED FOR BULK
+            ENDIF
+         ENDIF
 !               CALL PERCOLATE(PERCT)
 !               IF (PERCT) THEN
 !                  ACCPTC = ACCPTC + 1
 !               ELSE
 !                  REJECTT = .TRUE.
 !               ENDIF
-               CALL CONTAINER(INSIDET)
-               IF (INSIDET) THEN
-                  ACCPTC = ACCPTC + 1
-               ELSE
-                  REJECTT = .TRUE.
-               ENDIF
-            ENDIF
-         ELSE
+!               CALL CONTAINER(INSIDET)
+!               IF (INSIDET) THEN
+!                  ACCPTC = ACCPTC + 1
+!               ELSE
+!                  REJECTT = .TRUE.
+!               ENDIF
+!            ENDIF
+!         ELSE
 !            CALL PERCOLATE(PERCT)
 !            IF (PERCT) THEN
 !               ACCPTC = ACCPTC + 1
 !            ELSE
 !               REJECTT = .TRUE.
 !            ENDIF
-             CALL CONTAINER(INSIDET)
-             IF (INSIDET) THEN
-                ACCPTC = ACCPTC + 1
-             ELSE
-                REJECTT = .TRUE.
-             ENDIF
-         ENDIF
+!             CALL CONTAINER(INSIDET)
+!             IF (INSIDET) THEN
+!                ACCPTC = ACCPTC + 1
+!             ELSE
+!                REJECTT = .TRUE.
+!             ENDIF
+!         ENDIF
 
          IF (REJECTT) THEN
             Q(INDXP,:) = QO(:)
@@ -359,7 +367,7 @@
      
       INTEGER          :: J1, J2, J7, J8, I, J
       DOUBLE PRECISION :: RIJ(3), RIJSQ, ABSRIJ, R2, R4, EXPFCT, RSS(3), RSSSQ
-      DOUBLE PRECISION :: PES, ALP, BET, GAM, VR, VA, VB, VG, DPFCT, NR(3), EI(3), EJ(3) 
+      DOUBLE PRECISION :: PES, PERS, PEK, ALP, BET, GAM, VR, VA, VB, VG, DPFCT, NR(3), EI(3), EJ(3) !ADDED PER, PEK
 
       PES  = 0.D0
 
@@ -424,7 +432,7 @@
      
       INTEGER          :: J1, J2, J3, J4, J7, J8, I, J
       DOUBLE PRECISION :: RI(3), RIJ(3), QI(4), RIJSQ, ABSRIJ, R2, R4, EXPFCT, RSS(3), RSSSQ, RM(3,3)
-      DOUBLE PRECISION :: PE, ALP, BET, GAM, VR, VA, VB, VG, DPFCT, NR(3), EI(3), EJ(3) 
+      DOUBLE PRECISION :: PE, PER, PEK, ALP, BET, GAM, VR, VA, VB, VG, DPFCT, NR(3), EI(3), EJ(3) !ADDED PER PEK 
 
       PE  = 0.D0
 
@@ -479,6 +487,7 @@
        CALL ENERGY_DIPOLE_REALSPACE(PER)
 
       CALL ENERGY_DIPOLE_FOURIERSPACE(PEK)
+      
       PE = PE + PER + PEK
  
 !-------------EWALD ROUTINES LOCATED AT END OF FILE-----------------
@@ -1612,7 +1621,7 @@
 
       SUBROUTINE SNENRG_DIPOLE_REALSPACE(J1,J8,PERS)
 
-      USE COMMONS, ONLY: ALPHA, ALPSQ, BOXL, DPMUSQ, INVRPI, NPART, E, R, NRBSITE
+      USE COMMONS, ONLY: ALPHA, ALPSQ, BOXL, DPMUSQ, INVRPI, NPART, E, R, NRBSITE, RS
 
       IMPLICIT NONE
 
@@ -1624,7 +1633,7 @@
       PERS = 0.D0
       RCUTSQ  = (0.5*BOXL)**2
 
-      !DO I = 1, NPART
+      !DO I = 1, NRBSITE
       !   EI(:) = E(I,:)
       !   IF (I == J) CYCLE
       !   EJ(:)  = E(J,:)
@@ -1647,14 +1656,14 @@
             PERS    = PERS + T1*DOTGAM - T2*DOTALP*DOTBET
          ENDIF
       ENDDO
-!      PERS = PERS - 2.D0*DPMUSQ*ALPHA**3*NPART*INVRPI/3.D0
+!      PERS = PERS - 2.D0*DPMUSQ*ALPHA**3*NRBSITE*INVRPI/3.D0
 
       END SUBROUTINE SNENRG_DIPOLE_REALSPACE
 
 !     ============================================================================================== 
       SUBROUTINE SNENRG_DIPOLE_FOURIERSPACE(J,DPEKS,MC,MS,SUMC,SUMS)
 
-      USE COMMONS, ONLY: ALPHA, BOXL, GU, NC, NCSQMAX, NPART, MAXK, PI, R, E, SUMCO, SUMSO, MCO, MSO, KFCTR, NRBSITE
+      USE COMMONS, ONLY: ALPHA, BOXL, GU, NC, NCSQMAX, NPART, MAXK, PI, R, E, SUMCO, SUMSO, MCO, MSO, KFCTR, NRBSITE, RS
 
       IMPLICIT NONE
 
@@ -1719,3 +1728,133 @@
       END SUBROUTINE SNENRG_DIPOLE_FOURIERSPACE
 
 !     ============================================================================================== 
+
+      SUBROUTINE ENERGY_DIPOLE_REALSPACE(PER)
+
+      USE COMMONS, ONLY: ALPHA, ALPSQ, BOXL, DPMUSQ, INVRPI, NPART, E, R, RS, NRBSITE
+
+      IMPLICIT NONE
+
+      INTEGER          :: J1, J2
+      DOUBLE PRECISION :: RSS(3), EI(3), EJ(3)
+      DOUBLE PRECISION :: ABSR, RSQ, R2, RCUTSQ, DOTALP, DOTBET, DOTGAM
+      DOUBLE PRECISION :: T0, T1, T2, PER
+
+      PER = 0.D0
+      RCUTSQ  = (0.5*BOXL)**2
+
+      DO J1 = 1, NRBSITE - 1
+         EI(:) = E(J1,:)
+         DO J2 = J1 + 1, NRBSITE
+            EJ(:)  = E(J2,:)
+            RSS(:) = RS(J1,:) - RS(J2,:)
+            RSS(:) = RSS(:) - BOXL*ANINT(RSS(:)/BOXL)
+            RSQ    = DOT_PRODUCT(RSS(:),RSS(:))
+            IF (RSQ < RCUTSQ) THEN
+               ABSR    = SQRT(RSQ)
+               R2      = 1.D0/RSQ
+               T0      = 2.D0*DPMUSQ*ALPHA*INVRPI*R2*EXP(-ALPSQ*RSQ)
+               T1      = DPMUSQ*R2*ERFC(ALPHA*ABSR)/ABSR + T0
+               T2      = 3.D0*R2*T1 + 2*ALPSQ*T0
+               DOTALP  = DOT_PRODUCT(RSS(:),EI(:))
+               DOTBET  = DOT_PRODUCT(RSS(:),EJ(:))
+               DOTGAM  = DOT_PRODUCT(EI(:),EJ(:))
+               PER     = PER + T1*DOTGAM - T2*DOTALP*DOTBET
+            ENDIF
+         ENDDO
+      ENDDO
+      PER = PER - 2.D0*DPMUSQ*ALPHA**3*NRBSITE*INVRPI/3.D0
+
+      END SUBROUTINE ENERGY_DIPOLE_REALSPACE
+
+!     ============================================================================================== 
+      SUBROUTINE ENERGY_DIPOLE_FOURIERSPACE(PEK)
+
+      USE COMMONS, ONLY: ALPHA, BOXL, GU, NC, NCSQMAX, NPART, NRBSITE, MAXK, PI, E, SUMCO, SUMSO, MCO, MSO, KFCTR
+
+      IMPLICIT NONE
+
+      INTEGER          :: NVV, VN(3), NX, NY, NZ, J, TOTK
+      DOUBLE PRECISION :: DUMMY, PC, PS, T, W
+      DOUBLE PRECISION :: VC(3), VS(3), TCOS(NRBSITE,0:NC,3), TSIN(NRBSITE,0:NC,3)
+      DOUBLE PRECISION :: PEK, FK(NRBSITE,3), GK(NRNSITE,3)
+
+      PEK = 0.D0
+!     Tabulates cos and sin functions
+      CALL EVAL_SIN_COS(TCOS,TSIN)
+
+      W = PI*PI/(BOXL*ALPHA)**2
+
+      TOTK = 0
+      DO NZ = 0, NC
+         DO NY =-NC, NC
+            DO NX =-NC, NC
+               VN(:) = (/NX, NY, NZ/)
+               NVV   = DOT_PRODUCT(VN,VN)
+               IF (NVV == 0 .OR. NVV > NCSQMAX) CYCLE
+               TOTK = TOTK + 1
+               IF (TOTK > MAXK ) STOP 'KFCTR is too small'
+               KFCTR(TOTK) = 2.D0*EXP(-W*NVV)/NVV
+               IF (NZ == 0) KFCTR(TOTK) = 0.5D0*KFCTR(TOTK)
+               SUMCO(TOTK) = 0.D0; SUMSO(TOTK) = 0.D0
+               DO J = 1, NRBSITE
+                  VC(:) = (/TCOS(J,ABS(NX),1), TCOS(J,ABS(NY),2), TCOS(J,NZ,3)/)
+                  VS(:) = (/TSIN(J,ABS(NX),1), TSIN(J,ABS(NY),2), TSIN(J,NZ,3)/)
+
+                  IF (NX < 0) VS(1) =-VS(1)
+                  IF (NY < 0) VS(2) =-VS(2)
+
+                  PC = VC(1)*VC(2)*VC(3) - VC(1)*VS(2)*VS(3) - VS(1)*VC(2)*VS(3) - VS(1)*VS(2)*VC(3)
+                  PS = VS(1)*VC(2)*VC(3) + VC(1)*VS(2)*VC(3) + VC(1)*VC(2)*VS(3) - VS(1)*VS(2)*VS(3)
+                  DUMMY = NX*E(J,1) + NY*E(J,2) + NZ*E(J,3)
+                  MCO(TOTK,J) = PC*DUMMY
+                  MSO(TOTK,J) = PS*DUMMY
+                  SUMCO(TOTK)  = SUMCO(TOTK) + MCO(TOTK,J)
+                  SUMSO(TOTK)  = SUMSO(TOTK) + MSO(TOTK,J)
+               ENDDO
+               PEK = PEK + GU*KFCTR(TOTK)*(SUMCO(TOTK)*SUMCO(TOTK) + SUMSO(TOTK)*SUMSO(TOTK))
+            ENDDO
+         ENDDO
+      ENDDO
+      print *, 'totk = ', totk 
+      END SUBROUTINE ENERGY_DIPOLE_FOURIERSPACE
+
+!     ============================================================================================== 
+
+      SUBROUTINE EVAL_SIN_COS(TCOS,TSIN)
+
+      USE COMMONS, ONLY: BOXL, NC, NPART, R, NRBSITE, RS
+
+      IMPLICIT NONE
+
+      INTEGER          :: J, K
+      DOUBLE PRECISION :: T(3), TT(3), U(3), W(3), TCOS(NPART,0:NC,3), TSIN(NPART,0:NC,3)
+      DOUBLE PRECISION, PARAMETER :: TWOPI = 8.D0*DATAN(1.D0)
+
+      T(:) = TWOPI
+      T(:) = T(:)/BOXL
+
+      DO J = 1, NRBSITE
+         TT(:) = T(:)*RS(J,:)
+         TCOS(J,0,:) = 1.D0
+         TSIN(J,0,:) = 0.D0
+         TCOS(J,1,:) = COS(TT(:))
+         TSIN(J,1,:) = SIN(TT(:))
+         U(:) = 2.D0*TCOS(J,1,:)
+         TCOS(J,2,:) = U(:)*TCOS(J,1,:)
+         TSIN(J,2,:) = U(:)*TSIN(J,1,:)
+         TT(:) = 1.D0
+         TCOS(J,2,:) = TCOS(J,2,:) - TT(:)
+         DO K = 3, NC
+            W(:) = U(:)*TCOS(J,K-1,:)
+            TCOS(J,K,:) = W(:) - TCOS(J,K-2,:)
+            W(:) = U(:)*TSIN(J,K-1,:)
+            TSIN(J,K,:) = W(:) - TSIN(J,K-2,:)
+         ENDDO
+      ENDDO
+
+      END SUBROUTINE EVAL_SIN_COS
+
+!     ============================================================================================== 
+
+
