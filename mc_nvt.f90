@@ -493,7 +493,7 @@
  
 !-------------EWALD ROUTINES LOCATED AT END OF FILE-----------------
 !-------------END OF MERGER SECTION 2-------------------------------
-            ENDDO
+            
          ENDDO
       ENDDO
 !
@@ -1817,7 +1817,7 @@
             ENDDO
          ENDDO
       ENDDO
-      print *, 'totk = ', totk 
+      !print *, 'totk = ', totk 
       END SUBROUTINE ENERGY_DIPOLE_FOURIERSPACE
 
 !     ============================================================================================== 
