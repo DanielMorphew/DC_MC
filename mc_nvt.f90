@@ -9,10 +9,11 @@
       INTEGER :: NPART, NRBSITE, NTSITE, MYUNIT, ISTEP, QCOUNT, NC, NCSQMAX
       DOUBLE PRECISION :: YKAPPA, DPMU, RSHIFT, FIELD
       DOUBLE PRECISION :: MAXDTR, MAXDRT, TMP, RADIUS
-      DOUBLE PRECISION, ALLOCATABLE :: RBSITE(:,:), RBUV(:,:), R(:,:), Q(:,:), RS(:,:), E(:,:), MCO(:,:), MSO(:)
+      DOUBLE PRECISION, ALLOCATABLE :: RBSITE(:,:), RBUV(:,:), R(:,:), Q(:,:), RS(:,:), E(:,:), MCO(:,:), MSO(:,:)
       LOGICAL :: FIELDT
-      
-      =========================
+     
+      ENDMODULE COMMONS 
+!==================================================================================================================
       PROGRAM SHIFTDP_MC_NVT
 
       USE COMMONS
@@ -164,9 +165,9 @@
             WRITE (3, *) PEPP, AVPE
             CLOSE (UNIT = 3, STATUS = 'KEEP')
 
-            OPEN (UNIT=9, FILE='dns.dat', STATUS='UNKNOWN', ACCESS ='APPEND')
-            WRITE (9, *) BOXL(1), BOXL(2), BOXL(3), AVVLM, AVDNS
-            CLOSE (UNIT = 9, STATUS = 'KEEP')
+!            OPEN (UNIT=9, FILE='dns.dat', STATUS='UNKNOWN', ACCESS ='APPEND')
+!            WRITE (9, *) BOXL(1), BOXL(2), BOXL(3), AVVLM, AVDNS
+!            CLOSE (UNIT = 9, STATUS = 'KEEP')
 
          ENDIF
 
@@ -1625,7 +1626,7 @@
 
       IMPLICIT NONE
 
-      INTEGER          :: I, J1, J8
+      INTEGER          :: I, J1, J8, J7
       DOUBLE PRECISION :: RSS(3), EI(3), EJ(3)
       DOUBLE PRECISION :: ABSR, RSQ, R2, RCUTSQ, DOTALP, DOTBET, DOTGAM
       DOUBLE PRECISION :: T0, T1, T2, PERS
@@ -1777,7 +1778,7 @@
       INTEGER          :: NVV, VN(3), NX, NY, NZ, J, TOTK
       DOUBLE PRECISION :: DUMMY, PC, PS, T, W
       DOUBLE PRECISION :: VC(3), VS(3), TCOS(NRBSITE,0:NC,3), TSIN(NRBSITE,0:NC,3)
-      DOUBLE PRECISION :: PEK, FK(NRBSITE,3), GK(NRNSITE,3)
+      DOUBLE PRECISION :: PEK, FK(NRBSITE,3), GK(NRBSITE,3)
 
       PEK = 0.D0
 !     Tabulates cos and sin functions
@@ -1828,7 +1829,7 @@
       IMPLICIT NONE
 
       INTEGER          :: J, K
-      DOUBLE PRECISION :: T(3), TT(3), U(3), W(3), TCOS(NPART,0:NC,3), TSIN(NPART,0:NC,3)
+      DOUBLE PRECISION :: T(3), TT(3), U(3), W(3), TCOS(NRBSITE,0:NC,3), TSIN(NRBSITE,0:NC,3)
       DOUBLE PRECISION, PARAMETER :: TWOPI = 8.D0*DATAN(1.D0)
 
       T(:) = TWOPI
