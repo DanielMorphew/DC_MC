@@ -312,6 +312,8 @@
             ELSE
                ACCPTC = ACCPTC + 1    !ADDED NEW LINE AND REMOVED CONTAINER AS NOT NEEDED FOR BULK
             ENDIF
+         ELSE
+            ACCPTC = ACCPTC +1
          ENDIF
 !               CALL PERCOLATE(PERCT)
 !               IF (PERCT) THEN
