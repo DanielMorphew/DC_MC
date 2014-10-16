@@ -1746,9 +1746,9 @@
       PER = 0.D0
       RCUTSQ  = (0.5*BOXL)**2
 
-      DO J1 = 1, NRBSITE - 1
+      DO J1 = 1, NPART - 1
          EI(:) = E(J1,:)
-         DO J2 = J1 + 1, NRBSITE
+         DO J2 = J1 + 1, NPART
             EJ(:)  = E(J2,:)
             RSS(:) = RS(J1,:) - RS(J2,:)
             RSS(:) = RSS(:) - BOXL*ANINT(RSS(:)/BOXL)
@@ -1837,7 +1837,7 @@
       T(:) = TWOPI
       T(:) = T(:)/BOXL
 
-      DO J = 1, NRBSITE
+      DO J = 1, NPART
          TT(:) = T(:)*RS(J,:)
          TCOS(J,0,:) = 1.D0
          TSIN(J,0,:) = 0.D0
