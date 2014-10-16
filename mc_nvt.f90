@@ -452,9 +452,9 @@
       ENDDO
 
       DO J1 = 1, NPART - 1
-         J3 = 3*J1
+        ! J3 = 3*J1
          DO J2 = J1 + 1, NPART
-            J4 = 3*J2
+            !J4 = 3*J2
             RIJ(:) = R(J1,:) - R(J2,:)
             RIJ(:) = RIJ(:) - BOXL*ANINT(RIJ(:)/BOXL) !---------PRESERVE MINIMUM IMAGE NEW!!!-----------
             RIJSQ  = DOT_PRODUCT(RIJ(:),RIJ(:))
