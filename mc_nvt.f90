@@ -362,7 +362,7 @@
 
 !     ============================================================================================== 
            
-      SUBROUTINE SNENRG(J2,PES)
+      SUBROUTINE SNENRG(J1,PES)
 
       USE COMMONS
 
@@ -375,11 +375,11 @@
       PES  = 0.D0
 
       DO J = 1, NRBSITE
-         J8 = NRBSITE*(J2-1) + J
-         EJ(:) = E(J8,:)
-         DO J1 = 1, NPART 
+         J1 = NRBSITE*(J1-1) + J
+         EJ(:) = E(J1,:)
+         DO J2 = 1, NPART 
             IF (J1 == J2) CYCLE
-            RIJ(:) = R(J1,:) - R(J2,:)
+            RIJ(:) = R(J2,:) - R(J1,:)
             RIJ(:) = RIJ(:) - BOXL*ANINT(RIJ(:)/BOXL) !-------Preserves minimum image NEW!!------------
             RIJSQ  = DOT_PRODUCT(RIJ(:),RIJ(:))
 !     Isotropic interaction between the spherical cores described by the Yukawa potential
@@ -410,14 +410,15 @@
 !         ENDDO
 !      ENDDO
 
-            CALL SNENRG_DIPOLE_REALSPACE(J1,J8,PERS)
-
-!           CALL SNENRG_DIPOLE_FOURIERSPACE(J1,J8,PEKS)
-
-            PES = PES + PERS !+ PEKS
-            
          ENDDO
       ENDDO
+      
+      CALL SNENRG_DIPOLE_REALSPACE(J1,J8,PERS)
+
+!     CALL SNENRG_DIPOLE_FOURIERSPACE(J1,J8,PEKS)
+
+      PES = PES + PERS !+ PEKS
+      
 !----------EWALD SUM ROUTINES LOCATED AT THE END OF THE FILE-------
 !----------END OF MERGER SECTION 1---------------------------------
 !      PRINT *, 'PES = ', PES/DFLOAT(NPART)
@@ -1621,13 +1622,13 @@
       
       !     ============================================================================================== 
 
-      SUBROUTINE SNENRG_DIPOLE_REALSPACE(J1,J8,PERS)
+      SUBROUTINE SNENRG_DIPOLE_REALSPACE(J1, PERS)
 
       USE COMMONS, ONLY: ALPHA, ALPSQ, BOXL, DPMUSQ, INVRPI, NPART, E, R, NRBSITE, RS
 
       IMPLICIT NONE
 
-      INTEGER          :: I, J1, J8, J7
+      INTEGER          :: J2, J1
       DOUBLE PRECISION :: RSS(3), EI(3), EJ(3)
       DOUBLE PRECISION :: ABSR, RSQ, R2, RCUTSQ, DOTALP, DOTBET, DOTGAM
       DOUBLE PRECISION :: T0, T1, T2, PERS
@@ -1635,15 +1636,11 @@
       PERS = 0.D0
       RCUTSQ  = (0.5*BOXL)**2
 
-      !DO I = 1, NRBSITE
-      !   EI(:) = E(I,:)
-      !   IF (I == J) CYCLE
-      !   EJ(:)  = E(J,:)
-      
-      DO I = 1, NRBSITE
-         J7    = NRBSITE*(J1-1) + I
-         EI(:) = E(J7,:)
-         RSS(:) = RS(J7,:) - RS(J8,:) 
+      DO J2 = 1, NRBSITE
+         EI(:) = E(J2,:)
+         IF (I == J) CYCLE
+        EJ(:)  = E(J1,:)
+         RSS(:) = RS(J2,:) - RS(J1,:) 
          RSS(:) = RSS(:) - BOXL*ANINT(RSS(:)/BOXL)
          RSQ    = DOT_PRODUCT(RSS(:),RSS(:))
          IF (RSQ < RCUTSQ) THEN
