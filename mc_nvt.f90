@@ -133,7 +133,7 @@
             DO J2 = 1, NRBSITE
                J3 = NRBSITE*(J1-1) + J2
                RS(J3,:) = R(J1,:) + MATMUL(RM,RBSITE(J2,:))
-!               E(J3,:)  = MATMUL(RM(:,:),RBUV(J2,:))
+               E(J3,:)  = MATMUL(RM(:,:),RBUV(J2,:))
             ENDDO
          ENDDO
 
