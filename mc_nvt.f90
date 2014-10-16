@@ -409,7 +409,12 @@
 !            ENDDO
 !         ENDDO
 !      ENDDO
-      
+
+         
+         ENDDO
+      ENDDO
+!----------EWALD SUM ROUTINES LOCATED AT THE END OF THE FILE-------
+!----------END OF MERGER SECTION 1---------------------------------
       CALL SNENRG_DIPOLE_REALSPACE(J1,J8,PERS)
 
 !      CALL SNENRG_DIPOLE_FOURIERSPACE(J1,J8,PEKS)
@@ -417,12 +422,6 @@
       PES = PES + PERS !+ PEKS
 
 !      PRINT *, 'PES = ', PES/DFLOAT(NPART)
-         
-         ENDDO
-      ENDDO
-!----------EWALD SUM ROUTINES LOCATED AT THE END OF THE FILE-------
-!----------END OF MERGER SECTION 1---------------------------------
-
       END SUBROUTINE SNENRG
 
 !     ============================================================================================== 
