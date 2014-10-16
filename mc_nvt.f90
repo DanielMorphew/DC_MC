@@ -413,9 +413,9 @@
          ENDDO
       ENDDO
       
-      CALL SNENRG_DIPOLE_REALSPACE(J1,J8,PERS)
+      CALL SNENRG_DIPOLE_REALSPACE(J1, PERS)
 
-!     CALL SNENRG_DIPOLE_FOURIERSPACE(J1,J8,PEKS)
+!     CALL SNENRG_DIPOLE_FOURIERSPACE(J1, PEKS)
 
       PES = PES + PERS !+ PEKS
       
@@ -1638,7 +1638,7 @@
 
       DO J2 = 1, NRBSITE
          EI(:) = E(J2,:)
-         IF (I == J) CYCLE
+         IF (J1 == J2) CYCLE
         EJ(:)  = E(J1,:)
          RSS(:) = RS(J2,:) - RS(J1,:) 
          RSS(:) = RSS(:) - BOXL*ANINT(RSS(:)/BOXL)
