@@ -487,17 +487,18 @@
 !                  DPFCT  = 3.D0*DPMU*DPMU
 !                  PE     = PE + DPFCT*R2*(GAM/3.D0 - ALP*BET)/ABSRIJ
 !               ENDDO
-       CALL ENERGY_DIPOLE_REALSPACE(PER)
 
-      CALL ENERGY_DIPOLE_FOURIERSPACE(PEK)
-      
-      PE = PE + PER + PEK
  
 !-------------EWALD ROUTINES LOCATED AT END OF FILE-----------------
 !-------------END OF MERGER SECTION 2-------------------------------
             
          ENDDO
       ENDDO
+      CALL ENERGY_DIPOLE_REALSPACE(PER)
+
+      CALL ENERGY_DIPOLE_FOURIERSPACE(PEK)
+      
+      PE = PE + PER + PEK
 !
 !      stop
 
