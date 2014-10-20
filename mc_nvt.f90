@@ -1636,10 +1636,10 @@
       PERS = 0.D0
       RCUTSQ  = (0.5*BOXL)**2
 
-      DO J2 = 1, NRBSITE
-         EI(:) = E(J2,:)
+      DO J2 = 1, NPART
          IF (J1 == J2) CYCLE
-        EJ(:)  = E(J1,:)
+         EI(:) = E(J2,:)
+         EJ(:)  = E(J1,:)
          RSS(:) = RS(J2,:) - RS(J1,:) 
          RSS(:) = RSS(:) - BOXL*ANINT(RSS(:)/BOXL)
          RSQ    = DOT_PRODUCT(RSS(:),RSS(:))
