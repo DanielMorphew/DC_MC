@@ -694,7 +694,7 @@
          CALL ROTMAT(QI, RM)
          WRITE(31,'(A5,1X,3F20.10)') 'O ', RI(J1,1), RI(J1,2), RI(J1,3)
          DO J2 = 1, NRBSITE
-            SR(J2,:) = R(J1,:) + MATMUL(RM,RBSITE(J2,:))
+            SR(J2,:) = RI(J1,:) + MATMUL(RM,RBSITE(J2,:))
             UV(:)     = MATMUL(RM(:,:),RBUV(J2,:))
             WRITE(31,'(A4,3F20.10,2X,A12,2X,3F20.10)') 'C', SR(J2,1), SR(J2,2), SR(J2,3), &
                 'atom_vector', UV(1), UV(2), UV(3)
